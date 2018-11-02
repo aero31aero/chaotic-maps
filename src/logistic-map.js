@@ -55,10 +55,9 @@ const logistic_map = () => {
 		}
 		// console.log(_history.slice(-20));
 		if (_cycle == 0) {
-			console.error(`No cycle of < ${maxi} found.`);
-			return 0;
+			// console.error(`No cycle of < ${maxi} found.`);
 		}
-		return {cycle: _cycle, orbit: _history.slice(-_cycle)};
+		return {cycle: _cycle, orbit: _history.slice(-_cycle), history: _history};
 	}
 
 	return cycle;
