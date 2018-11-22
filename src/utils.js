@@ -182,6 +182,158 @@ let test_suite = function () {
 	return {adjacency,non_linearity,};
 }();
 
+var img_utils = function () {
+	let load_image = () => {
+		let c = document.getElementById("src-image");
+		let c2 = document.getElementById("final-image");
+		let c3 = document.getElementById("reverse-image");
+		let img=document.getElementById("src-img");
+		c.width = img.width;
+		c.height = img.height;
+		c2.width = img.width;
+		c2.height = img.height;
+		c3.width = img.width;
+		c3.height = img.height;
+		let ctx = c.getContext('2d');
+		ctx.drawImage(img, 0, 0);
+	}
+
+	let get_image_pixels = (name) => {
+		let c = document.getElementById(name);
+		let ctx = c.getContext('2d');
+		let arr = ctx.getImageData(0, 0, c.width, c.height).data;
+		return arr;
+	};
+
+	let paint_image_data = (arr, name) => {
+		let c = document.getElementById(name);
+		let ctx = c.getContext('2d');
+		let imageData = ctx.createImageData(c.width, c.height);
+		for (let i = 0; i < imageData.data.length; i++) {
+			imageData.data[i] = arr[i];
+		}
+		ctx.putImageData(imageData, 0, 0);
+	}
+
+	let strip_alpha = (arr) => {
+		let final = [];
+		arr.forEach((elem, idx)=>{
+			if (idx % 4 != 3) {
+				final.push(elem);
+			}
+		});
+		return final;
+	};
+
+	let add_alpha = (arr) => {
+		let final = [];
+		arr.forEach((elem, idx) => {
+			final.push(elem);
+			if (idx % 3 == 2) {
+				final.push(255);
+			}
+		});
+		return final;
+	}
+
+	let get_chunks = (arr, fill = true) => {
+		let chunks = [];
+		let temp = [];
+		arr.forEach(elem => {
+			temp.push(elem);
+			if (temp.length == 256) {
+				chunks.push(temp);
+				temp = [];
+			}
+		});
+		if (temp.length == 0) return chunks;
+		if (!fill) return chunks;
+		for (i = 0; i<256-temp.length; i++) {
+			temp.push(0);
+		}
+		chunks.push(temp);
+		return chunks;
+	};
+
+	let combine_chunks = (arr) => {
+		final = [];
+		arr.forEach(elem => {
+			elem.forEach(e => {
+				final.push(e);
+			});
+		});
+		return final;
+	}
+
+	let apply_sbox_positive = (arr, box) => {
+		let final = new Array(256).fill(0);
+		box.forEach((elem,idx) => {
+			final[elem] = arr[idx];
+		})
+		return final;
+	};
+
+	let apply_sbox_negative = (arr, box) => {
+		let final = new Array(256).fill(0);
+		box.forEach((elem,idx) => {
+			final[idx] = arr[elem];
+		})
+		return final;
+	};
+
+	let encrypt = (x, boxes) => {
+		x = img_utils.strip_alpha(x);
+		x = img_utils.get_chunks(x);
+		for(let i = 0; i<x.length; i++){
+			x[i] = img_utils.apply_sbox_positive(x[i], boxes[i%1000]);
+		};
+		x = img_utils.combine_chunks(x);
+		let y = x;
+		let z = y.splice(0,128);
+		y = img_utils.get_chunks(y);
+		for(let i = 0; i<y.length; i++){
+			y[i] = img_utils.apply_sbox_positive(y[i], boxes[i%1000]);
+		};
+		y = img_utils.combine_chunks(y);
+		x = img_utils.combine_chunks([z,y]);
+		x = img_utils.add_alpha(x);
+		return x;
+	}
+
+	let decrypt = (x, boxes) => {
+		x = img_utils.strip_alpha(x);
+		let y = x;
+		let z = y.splice(0,128);
+		y = img_utils.get_chunks(y);
+		for(let i = 0; i<y.length; i++){
+			y[i] = img_utils.apply_sbox_negative(y[i], boxes[i%1000]);
+		};
+		y = img_utils.combine_chunks(y);
+		x = img_utils.combine_chunks([z,y]);
+		x = img_utils.get_chunks(x);
+		for(let i = 0; i<x.length; i++){
+			x[i] = img_utils.apply_sbox_negative(x[i], boxes[i%1000]);
+		};
+		x = img_utils.combine_chunks(x);
+		x = img_utils.add_alpha(x);
+		return x;
+	}
+
+	return {
+		load_image,
+		get_image_pixels,
+		paint_image_data,
+		strip_alpha,
+		add_alpha,
+		get_chunks,
+		combine_chunks,
+		apply_sbox_positive,
+		apply_sbox_negative,
+		encrypt,
+		decrypt,
+	};
+}();
+
 let random = function () {
 	let print_avg_adjacency_for_boxes = (boxes, str) => {
 		let avg_pcnt = 0;
@@ -209,13 +361,6 @@ let random = function () {
 
 	return {print_avg_adjacency_for_boxes, get_random_sboxes,};
 }();
-
-boxes = sbox_factory({
-	x: 0.5,
-	n: 0.6,
-	r: 4,
-	count: 1000,
-});
 
 // print.sbox(boxes[0]);
 // console.log("Adjacency Test (SB0):", test_suite.adjacency(boxes[0]));
