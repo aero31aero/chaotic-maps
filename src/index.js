@@ -8,6 +8,15 @@ var load_params = () => {
 	return opt;
 }
 
+handle_upload = function(e) {
+	console.log("HERE");
+    var URL = window.webkitURL || window.URL;
+    var url = URL.createObjectURL(e.target.files[0]);
+    let img = document.getElementById("src-img");
+    img.src = url;
+    img.onload = img_utils.load_image;
+};
+
 var encrypt = () => {
 	let opt = load_params();
 	opt.count = 1000;
@@ -29,3 +38,5 @@ var decrypt = () => {
 
 xx = encrypt;
 yy = decrypt;
+var input_field = document.getElementById('img-upload');
+input_field.onchange = handle_upload;
